@@ -2,10 +2,10 @@ import type {
   WatchdogConfig,
   WatchdogIncident,
   WatchdogRuntimeState,
-} from './types.js'
+} from "./types.js";
 
 export function createRuntimeState(
-  config: WatchdogConfig
+  config: WatchdogConfig,
 ): WatchdogRuntimeState {
   return {
     config,
@@ -14,42 +14,42 @@ export function createRuntimeState(
     lastTriggeredAt: new Map(),
     sessionStartedAt: null,
     lastStatus: undefined,
-  }
+  };
 }
 
 export function resetRuntimeState(
   state: WatchdogRuntimeState,
-  config: WatchdogConfig
+  config: WatchdogConfig,
 ): void {
-  state.config = config
-  state.events = []
-  state.incidents = []
-  state.lastTriggeredAt.clear()
-  state.sessionStartedAt = null
-  state.lastStatus = undefined
+  state.config = config;
+  state.events = [];
+  state.incidents = [];
+  state.lastTriggeredAt.clear();
+  state.sessionStartedAt = null;
+  state.lastStatus = undefined;
 }
 
 export function resetActiveRunState(state: WatchdogRuntimeState): void {
-  state.events = []
-  state.lastTriggeredAt.clear()
-  state.sessionStartedAt = null
-  state.lastStatus = undefined
+  state.events = [];
+  state.lastTriggeredAt.clear();
+  state.sessionStartedAt = null;
+  state.lastStatus = undefined;
 }
 
 export function recordIncident(
   state: WatchdogRuntimeState,
-  incident: WatchdogIncident
+  incident: WatchdogIncident,
 ): void {
-  state.incidents.push(incident)
-  state.lastTriggeredAt.set(incident.fingerprint, incident.toolIndex)
+  state.incidents.push(incident);
+  state.lastTriggeredAt.set(incident.fingerprint, incident.toolIndex);
 }
 
 export function shouldCooldown(
   state: WatchdogRuntimeState,
   fingerprint: string,
-  currentToolIndex: number
+  currentToolIndex: number,
 ): boolean {
-  const previous = state.lastTriggeredAt.get(fingerprint)
-  if (previous === undefined) return false
-  return currentToolIndex - previous < state.config.actions.cooldownToolCalls
+  const previous = state.lastTriggeredAt.get(fingerprint);
+  if (previous === undefined) return false;
+  return currentToolIndex - previous < state.config.actions.cooldownToolCalls;
 }
