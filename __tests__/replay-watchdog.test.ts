@@ -1,25 +1,25 @@
-import { expect, test } from "bun:test";
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { formatReplaySummary, replaySession } from "../replay.js";
+import { expect, test } from 'bun:test'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { formatReplaySummary, replaySession } from '../replay.js'
 
 function writeTempFile(name: string, content: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "watchdog-replay-"));
-  const path = join(dir, name);
-  writeFileSync(path, content);
-  return path;
+  const dir = mkdtempSync(join(tmpdir(), 'watchdog-replay-'))
+  const path = join(dir, name)
+  writeFileSync(path, content)
+  return path
 }
 
 const SESSION_TEXT = [
   JSON.stringify({
-    type: "message",
-    id: "subagent-wrapper",
+    type: 'message',
+    id: 'subagent-wrapper',
     message: {
-      role: "toolResult",
-      toolName: "subagent",
-      toolCallId: "subagent-1",
-      content: [{ type: "text", text: "done" }],
+      role: 'toolResult',
+      toolName: 'subagent',
+      toolCallId: 'subagent-1',
+      content: [{ type: 'text', text: 'done' }],
       details: {
         results: [
           {
@@ -29,19 +29,19 @@ const SESSION_TEXT = [
       },
     },
   }),
-].join("\n");
+].join('\n')
 
 function buildEmbeddedMessages() {
   const messages: any[] = [
     {
-      role: "user",
-      content: [{ type: "text", text: "inspect deeply" }],
+      role: 'user',
+      content: [{ type: 'text', text: 'inspect deeply' }],
       timestamp: 0,
     },
-  ];
+  ]
 
-  let ts = 1;
-  let id = 0;
+  let ts = 1
+  let id = 0
   for (let cycle = 0; cycle < 12; cycle++) {
     for (const [offset, limit] of [
       [1, 110],
@@ -50,56 +50,56 @@ function buildEmbeddedMessages() {
       [778, 150],
     ]) {
       messages.push({
-        role: "assistant",
+        role: 'assistant',
         content: [
           {
-            type: "toolCall",
+            type: 'toolCall',
             id: `read-${id}`,
-            name: "read",
+            name: 'read',
             arguments: {
-              path: "src/core/session.rs",
+              path: 'src/core/session.rs',
               offset,
               limit,
             },
           },
         ],
         timestamp: ts++,
-      });
+      })
       messages.push({
-        role: "toolResult",
+        role: 'toolResult',
         toolCallId: `read-${id}`,
-        toolName: "read",
-        content: [{ type: "text", text: "content" }],
+        toolName: 'read',
+        content: [{ type: 'text', text: 'content' }],
         timestamp: ts++,
-      });
-      id++;
+      })
+      id++
     }
   }
 
-  return messages;
+  return messages
 }
 
-test("replaySession reports incidents for an embedded pathological read loop", () => {
-  const sessionPath = writeTempFile("session.jsonl", SESSION_TEXT);
+test('replaySession reports incidents for an embedded pathological read loop', () => {
+  const sessionPath = writeTempFile('session.jsonl', SESSION_TEXT)
   const summary = replaySession({
     sessionPath,
     subagentLine: 1,
-  });
+  })
 
-  expect(summary.counts.toolCalls).toBeGreaterThan(40);
-  expect(summary.incidents.length).toBeGreaterThan(0);
-  expect(summary.topReadPaths[0]?.path).toContain("src/core/session.rs");
-});
+  expect(summary.counts.toolCalls).toBeGreaterThan(40)
+  expect(summary.incidents.length).toBeGreaterThan(0)
+  expect(summary.topReadPaths[0]?.path).toContain('src/core/session.rs')
+})
 
-test("formatReplaySummary emits incident and path sections", () => {
-  const sessionPath = writeTempFile("session.jsonl", SESSION_TEXT);
+test('formatReplaySummary emits incident and path sections', () => {
+  const sessionPath = writeTempFile('session.jsonl', SESSION_TEXT)
   const summary = replaySession({
     sessionPath,
     subagentLine: 1,
-  });
-  const markdown = formatReplaySummary(summary);
+  })
+  const markdown = formatReplaySummary(summary)
 
-  expect(markdown).toContain("# Watchdog Replay");
-  expect(markdown).toContain("## Incidents");
-  expect(markdown).toContain("## Top Read Paths");
-});
+  expect(markdown).toContain('# Watchdog Replay')
+  expect(markdown).toContain('## Incidents')
+  expect(markdown).toContain('## Top Read Paths')
+})
