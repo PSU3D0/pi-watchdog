@@ -1,0 +1,72 @@
+{
+  // Agent Watchdog config.
+  // Search order:
+  //   1. ~/.pi/agent/watchdog.json
+  //   2. ~/.pi/agent/watchdog.jsonc
+  //   3. .pi/watchdog.json
+  //   4. .pi/watchdog.jsonc
+
+  "enabled": true,
+  "debug": false,
+  "maxHistoryEvents": 5000,
+  "rebuildHistoryOnSessionStart": true,
+
+  "detectors": {
+    "repetitiveRead": {
+      "enabled": true,
+      "readTools": ["read"],
+      "searchTools": ["grep", "find"],
+      "windowToolCalls": 120,
+      "minReadCalls": 24,
+      "minDominantPathReads": 12,
+      "suspicious": {
+        "topPathShare": 0.35,
+        "exactChunkShare": 0.2,
+        "overlapShare": 0.55,
+        "readSearchRatio": 0.85,
+        "maxUniquePaths": 8,
+        "restarts": 5,
+        "minScore": 5,
+      },
+      "pathological": {
+        "topPathShare": 0.5,
+        "exactChunkShare": 0.3,
+        "overlapShare": 0.7,
+        "readSearchRatio": 0.92,
+        "maxUniquePaths": 6,
+        "restarts": 10,
+        "minScore": 8,
+      },
+      "actions": {
+        // Optional per-detector overrides.
+        // Example: only the repetitive-read detector escalates to steering/blocking.
+        // "pathological": ["status", "persist", "notify", "steer", "block"]
+      },
+    },
+    "toolBudget": {
+      "enabled": true,
+      "softToolCalls": 300,
+      "hardToolCalls": 600,
+      "softDurationMs": 1200000,
+      "hardDurationMs": 2700000,
+    },
+  },
+
+  "actions": {
+    // Default global actions by severity.
+    "suspicious": ["status", "persist"],
+    "stuck": ["status", "persist", "notify"],
+    "pathological": ["status", "persist", "notify"],
+
+    // Cooldown between repeated interventions with the same fingerprint.
+    "cooldownToolCalls": 25,
+
+    // `custom` sends an honest watchdog system-style message.
+    // `user` injects a user message instead.
+    "delivery": "custom",
+
+    "customMessageType": "watchdog",
+    "displayMessages": true,
+    "triggerTurn": true,
+  },
+}
