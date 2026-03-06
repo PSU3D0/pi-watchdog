@@ -6,30 +6,30 @@ import type {
   WatchdogRuntimeSnapshot,
   WatchdogRuntimeState,
   WatchdogToolEvent,
-} from './types.js'
-import { repetitiveReadDetector } from './detectors/repetitive-read.js'
-import { toolBudgetDetector } from './detectors/tool-budget.js'
-import { recordIncident, shouldCooldown } from './state.js'
-import { takeRecent } from './utils.js'
+} from "./types.js";
+import { repetitiveReadDetector } from "./detectors/repetitive-read.js";
+import { toolBudgetDetector } from "./detectors/tool-budget.js";
+import { recordIncident, shouldCooldown } from "./state.js";
+import { takeRecent } from "./utils.js";
 
 const DEFAULT_DETECTORS: WatchdogDetector[] = [
   repetitiveReadDetector,
   toolBudgetDetector,
-]
+];
 
 export function evaluateCandidate(
   state: WatchdogRuntimeState,
   candidate: WatchdogToolEvent,
   config = state.config,
-  detectors = DEFAULT_DETECTORS
+  detectors = DEFAULT_DETECTORS,
 ): {
-  finding: WatchdogFinding | null
-  incident: WatchdogIncident | null
-  actions: string[]
-  cooledDown: boolean
+  finding: WatchdogFinding | null;
+  incident: WatchdogIncident | null;
+  actions: string[];
+  cooledDown: boolean;
 } {
   if (state.sessionStartedAt === null) {
-    state.sessionStartedAt = candidate.timestamp
+    state.sessionStartedAt = candidate.timestamp;
   }
 
   const snapshot: WatchdogRuntimeSnapshot = {
@@ -37,23 +37,27 @@ export function evaluateCandidate(
     candidate,
     now: candidate.timestamp,
     sessionStartedAt: state.sessionStartedAt,
-  }
+  };
 
   const findings = detectors
     .map((detector) => detector.evaluate(snapshot, config))
-    .filter((finding): finding is WatchdogFinding => finding !== null)
+    .filter((finding): finding is WatchdogFinding => finding !== null);
 
-  const finding = selectMostSevere(findings)
+  const finding = selectMostSevere(findings);
   if (!finding) {
     return {
       finding: null,
       incident: null,
       actions: [],
       cooledDown: false,
-    }
+    };
   }
 
-  const cooledDown = shouldCooldown(state, finding.fingerprint, candidate.index)
+  const cooledDown = shouldCooldown(
+    state,
+    finding.fingerprint,
+    candidate.index,
+  );
   const incident: WatchdogIncident = {
     detectorId: finding.detectorId,
     severity: finding.severity,
@@ -65,32 +69,32 @@ export function evaluateCandidate(
     toolIndex: candidate.index,
     timestamp: candidate.timestamp,
     subject: finding.subject ? { ...finding.subject } : undefined,
-  }
+  };
 
   if (!cooledDown) {
-    recordIncident(state, incident)
+    recordIncident(state, incident);
   }
 
   return {
     finding,
     incident,
-    actions: cooledDown ? ['status'] : resolveActions(config, finding),
+    actions: cooledDown ? ["status"] : resolveActions(config, finding),
     cooledDown,
-  }
+  };
 }
 
 export function appendEvent(
   state: WatchdogRuntimeState,
-  event: WatchdogToolEvent
+  event: WatchdogToolEvent,
 ): void {
-  state.events.push(event)
-  state.events = takeRecent(state.events, state.config.maxHistoryEvents)
+  state.events.push(event);
+  state.events = takeRecent(state.events, state.config.maxHistoryEvents);
 }
 
 export function formatFindingStatus(finding: WatchdogFinding): string {
-  const path = finding.subject?.path
-  const suffix = path ? ` • ${path}` : ''
-  return `🛟 Watchdog: ${finding.severity} ${finding.detectorId}${suffix}`
+  const path = finding.subject?.path;
+  const suffix = path ? ` • ${path}` : "";
+  return `🛟 Watchdog: ${finding.severity} ${finding.detectorId}${suffix}`;
 }
 
 export function formatSteerMessage(finding: WatchdogFinding): string {
@@ -98,64 +102,64 @@ export function formatSteerMessage(finding: WatchdogFinding): string {
     `[Watchdog] ${finding.title}`,
     finding.summary,
     ...finding.evidence.slice(0, 4).map((line) => `- ${line}`),
-    'Please summarize what you know, switch surfaces, or justify why this next tool call is still necessary before continuing.',
-  ]
-  return lines.join('\n')
+    "Please summarize what you know, switch surfaces, or justify why this next tool call is still necessary before continuing.",
+  ];
+  return lines.join("\n");
 }
 
 export function summarizeState(state: WatchdogRuntimeState): string {
-  const last = state.incidents.at(-1)
+  const last = state.incidents.at(-1);
   if (!last) {
-    return `watchdog enabled • ${state.events.length} tool events • no incidents`
+    return `watchdog enabled • ${state.events.length} tool events • no incidents`;
   }
 
-  return `${state.events.length} tool events • ${state.incidents.length} incidents • last=${last.severity} ${last.detectorId}`
+  return `${state.events.length} tool events • ${state.incidents.length} incidents • last=${last.severity} ${last.detectorId}`;
 }
 
 function resolveActions(
   config: WatchdogConfig,
-  finding: WatchdogFinding
+  finding: WatchdogFinding,
 ): string[] {
   const detectorOverrides = getDetectorActionOverrides(
     config,
-    finding.detectorId
-  )
+    finding.detectorId,
+  );
   if (detectorOverrides) {
-    const override = detectorOverrides[finding.severity]
-    if (override) return [...override]
+    const override = detectorOverrides[finding.severity];
+    if (override) return [...override];
   }
-  return [...config.actions[finding.severity]]
+  return [...config.actions[finding.severity]];
 }
 
 function getDetectorActionOverrides(
   config: WatchdogConfig,
-  detectorId: string
+  detectorId: string,
 ): Record<string, string[] | undefined> | undefined {
-  if (detectorId === 'repetitive-read') {
+  if (detectorId === "repetitive-read") {
     return config.detectors.repetitiveRead.actions as
       | Record<string, string[] | undefined>
-      | undefined
+      | undefined;
   }
-  if (detectorId === 'tool-budget') {
+  if (detectorId === "tool-budget") {
     return config.detectors.toolBudget.actions as
       | Record<string, string[] | undefined>
-      | undefined
+      | undefined;
   }
-  return undefined
+  return undefined;
 }
 
 function selectMostSevere(findings: WatchdogFinding[]): WatchdogFinding | null {
-  if (findings.length === 0) return null
+  if (findings.length === 0) return null;
 
-  const ranking: Record<WatchdogFinding['severity'], number> = {
+  const ranking: Record<WatchdogFinding["severity"], number> = {
     suspicious: 0,
     stuck: 1,
     pathological: 2,
-  }
+  };
 
   return findings
     .slice()
     .sort(
-      (a, b) => ranking[b.severity] - ranking[a.severity] || b.score - a.score
-    )[0]
+      (a, b) => ranking[b.severity] - ranking[a.severity] || b.score - a.score,
+    )[0];
 }

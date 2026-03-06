@@ -1,15 +1,15 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
-import type { WatchdogConfig } from './types.js'
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
+import type { WatchdogConfig } from "./types.js";
 
 type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Array<infer U>
     ? U[]
     : T[K] extends object
       ? DeepPartial<T[K]>
-      : T[K]
-}
+      : T[K];
+};
 
 const DEFAULT_CONFIG: WatchdogConfig = {
   enabled: true,
@@ -19,8 +19,8 @@ const DEFAULT_CONFIG: WatchdogConfig = {
   detectors: {
     repetitiveRead: {
       enabled: true,
-      readTools: ['read'],
-      searchTools: ['grep', 'find'],
+      readTools: ["read"],
+      searchTools: ["grep", "find"],
       windowToolCalls: 120,
       minReadCalls: 24,
       minDominantPathReads: 12,
@@ -52,168 +52,168 @@ const DEFAULT_CONFIG: WatchdogConfig = {
     },
   },
   actions: {
-    suspicious: ['status', 'persist'],
-    stuck: ['status', 'persist', 'notify'],
-    pathological: ['status', 'persist', 'notify'],
+    suspicious: ["status", "persist"],
+    stuck: ["status", "persist", "notify"],
+    pathological: ["status", "persist", "notify"],
     cooldownToolCalls: 25,
-    delivery: 'custom',
-    customMessageType: 'watchdog',
+    delivery: "custom",
+    customMessageType: "watchdog",
     displayMessages: true,
     triggerTurn: true,
   },
-}
+};
 
 export function getDefaultConfig(): WatchdogConfig {
-  return structuredClone(DEFAULT_CONFIG)
+  return structuredClone(DEFAULT_CONFIG);
 }
 
 export function mergeConfig(
   ...overrides: Array<DeepPartial<WatchdogConfig> | undefined>
 ): WatchdogConfig {
-  const config = getDefaultConfig()
+  const config = getDefaultConfig();
 
   for (const override of overrides) {
     if (override) {
-      mergeDeep(config, override)
+      mergeDeep(config, override);
     }
   }
 
-  return config
+  return config;
 }
 
 export function getConfigSearchPaths(
   cwd: string,
-  homeDir = homedir()
+  homeDir = homedir(),
 ): string[] {
-  const globalDir = join(homeDir, '.pi', 'agent')
-  const localDir = join(cwd, '.pi')
+  const globalDir = join(homeDir, ".pi", "agent");
+  const localDir = join(cwd, ".pi");
 
   return [
-    join(globalDir, 'watchdog.json'),
-    join(globalDir, 'watchdog.jsonc'),
-    join(localDir, 'watchdog.json'),
-    join(localDir, 'watchdog.jsonc'),
-  ]
+    join(globalDir, "watchdog.json"),
+    join(globalDir, "watchdog.jsonc"),
+    join(localDir, "watchdog.json"),
+    join(localDir, "watchdog.jsonc"),
+  ];
 }
 
 export function parseConfigText(text: string): DeepPartial<WatchdogConfig> {
-  const withoutBom = text.replace(/^\uFEFF/, '')
-  const withoutComments = stripJsonComments(withoutBom)
-  const withoutTrailingCommas = withoutComments.replace(/,\s*([}\]])/g, '$1')
-  return JSON.parse(withoutTrailingCommas)
+  const withoutBom = text.replace(/^\uFEFF/, "");
+  const withoutComments = stripJsonComments(withoutBom);
+  const withoutTrailingCommas = withoutComments.replace(/,\s*([}\]])/g, "$1");
+  return JSON.parse(withoutTrailingCommas);
 }
 
 export function loadConfig(cwd: string, homeDir = homedir()): WatchdogConfig {
-  const overrides: Array<DeepPartial<WatchdogConfig>> = []
+  const overrides: Array<DeepPartial<WatchdogConfig>> = [];
 
   for (const path of getConfigSearchPaths(cwd, homeDir)) {
-    const override = readConfigOverride(path)
+    const override = readConfigOverride(path);
     if (override) {
-      overrides.push(override)
+      overrides.push(override);
     }
   }
 
-  return mergeConfig(...overrides)
+  return mergeConfig(...overrides);
 }
 
 function readConfigOverride(
-  path: string
+  path: string,
 ): DeepPartial<WatchdogConfig> | undefined {
   if (!existsSync(path)) {
-    return undefined
+    return undefined;
   }
 
   try {
-    return parseConfigText(readFileSync(path, 'utf8'))
+    return parseConfigText(readFileSync(path, "utf8"));
   } catch (error) {
-    console.error(`[watchdog] Failed to load config from ${path}:`, error)
-    return undefined
+    console.error(`[watchdog] Failed to load config from ${path}:`, error);
+    return undefined;
   }
 }
 
 function stripJsonComments(input: string): string {
-  let output = ''
-  let inString = false
-  let stringDelimiter = '"'
-  let escaping = false
-  let inLineComment = false
-  let inBlockComment = false
+  let output = "";
+  let inString = false;
+  let stringDelimiter = '"';
+  let escaping = false;
+  let inLineComment = false;
+  let inBlockComment = false;
 
   for (let index = 0; index < input.length; index++) {
-    const char = input[index]
-    const next = input[index + 1]
+    const char = input[index];
+    const next = input[index + 1];
 
     if (inLineComment) {
-      if (char === '\n') {
-        inLineComment = false
-        output += char
+      if (char === "\n") {
+        inLineComment = false;
+        output += char;
       }
-      continue
+      continue;
     }
 
     if (inBlockComment) {
-      if (char === '*' && next === '/') {
-        inBlockComment = false
-        index++
+      if (char === "*" && next === "/") {
+        inBlockComment = false;
+        index++;
       }
-      continue
+      continue;
     }
 
     if (inString) {
-      output += char
+      output += char;
       if (escaping) {
-        escaping = false
-        continue
+        escaping = false;
+        continue;
       }
-      if (char === '\\') {
-        escaping = true
-        continue
+      if (char === "\\") {
+        escaping = true;
+        continue;
       }
       if (char === stringDelimiter) {
-        inString = false
+        inString = false;
       }
-      continue
+      continue;
     }
 
     if (char === '"' || char === "'") {
-      inString = true
-      stringDelimiter = char
-      output += char
-      continue
+      inString = true;
+      stringDelimiter = char;
+      output += char;
+      continue;
     }
 
-    if (char === '/' && next === '/') {
-      inLineComment = true
-      index++
-      continue
+    if (char === "/" && next === "/") {
+      inLineComment = true;
+      index++;
+      continue;
     }
 
-    if (char === '/' && next === '*') {
-      inBlockComment = true
-      index++
-      continue
+    if (char === "/" && next === "*") {
+      inBlockComment = true;
+      index++;
+      continue;
     }
 
-    output += char
+    output += char;
   }
 
-  return output
+  return output;
 }
 
 function mergeDeep(target: any, source: any): any {
   if (isObject(target) && isObject(source)) {
     for (const key in source) {
       if (isObject(source[key])) {
-        if (!target[key]) Object.assign(target, { [key]: {} })
-        mergeDeep(target[key], source[key])
+        if (!target[key]) Object.assign(target, { [key]: {} });
+        mergeDeep(target[key], source[key]);
       } else {
-        Object.assign(target, { [key]: source[key] })
+        Object.assign(target, { [key]: source[key] });
       }
     }
   }
-  return target
+  return target;
 }
 
 function isObject(item: any) {
-  return item && typeof item === 'object' && !Array.isArray(item)
+  return item && typeof item === "object" && !Array.isArray(item);
 }
